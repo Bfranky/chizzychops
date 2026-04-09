@@ -1,5 +1,5 @@
 import Navbar           from '@/app/components/Navbar'
-import Services         from '@/app/components/services/layout'
+import Services         from '@/app/components/servicessection/Service'
 import Footer           from '@/app/components/Footer'
 import ScrollToTop      from '@/app/components/ScrollToTop'
 import FloatingWhatsApp from '@/app/components/FloatingWhatsApp'
