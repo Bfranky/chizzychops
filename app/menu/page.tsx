@@ -1,6 +1,6 @@
 'use client'
 
-import Menu from './Menu'
+import Menu from '@/app/components/mainmenu/Menu'
 import Navbar from '@/app/components/Navbar'
 import Footer from '@/app/components/Footer'
 import ScrollToTop from '@/app/components/ScrollToTop'
