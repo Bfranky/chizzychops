@@ -1,11 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { saveReview, saveCatering } from '@/app/lib/supabase'
 
 const GOOGLE_REVIEW = 'https://www.google.com/maps/place/Chizzychops+%26+grillz/@6.6012076,3.3115685,17z/data=!3m1!4b1!4m6!3m5!1s0x103b91874096c5a9:0x354c0d35e0957b4f!8m2!3d6.6012076!4d3.3115685!16s%2Fg%2F11pclvf9lj?entry=ttu#lrd=0x103b91874096c5a9:0x354c0d35e0957b4f,3'
 const GOOGLE_MAP    = 'https://www.google.com/maps/place/Chizzychops+%26+grillz/@6.6012076,3.3115685,17z'
-const CATERING_WA   = 'https://wa.me/2348094946923?text=Hi%20Chizzychops%20%26%20Grillz!%20I%27d%20like%20to%20enquire%20about%20*Event%20Catering*%20%F0%9F%8D%BD%EF%B8%8F'
 
 const dishes = ['Basmati Jollof Rice','Special Fried Rice','Coconut Rice','Native Nigerian Rice','Creamy Chicken Pasta','Jollof Spaghetti','Shrimp Pasta','Asun Pasta','Classic Food Box','Deluxe Food Box','Premium Food Box','Breakfast Box','Treat Box','Grilled Chicken','Suya','Asun (Peppered Goat)','Nkwobi',"Edna's Porridge",'Egusi Soup','Event Catering','Other']
 const aspects = [{k:'taste',label:'Taste & Flavour',icon:'😋'},{k:'portion',label:'Portion Size',icon:'🍽️'},{k:'delivery',label:'Delivery Speed',icon:'⚡'},{k:'packaging',label:'Packaging Quality',icon:'📦'},{k:'value',label:'Value for Money',icon:'💰'}]
@@ -55,20 +53,25 @@ export default function ReviewSystem() {
 
   const submitReview = async () => {
     setBusy(true)
-    // 1. Save to DB
     try {
-      await saveReview({
-        name, dish, overall,
-        taste: ratings.taste, portion: ratings.portion,
-        delivery: ratings.delivery, packaging: ratings.packaging,
-        value: ratings.value,
-        recommend: recommend ?? true,
-        review_text: text,
-        type: 'review',
+      await fetch('/api/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          dish,
+          overall,
+          taste:     ratings.taste,
+          portion:   ratings.portion,
+          delivery:  ratings.delivery,
+          packaging: ratings.packaging,
+          value:     ratings.value,
+          recommend: recommend ?? true,
+          review_text: text,
+        }),
       })
-    } catch(e) { console.error('Review DB save failed:', e) }
+    } catch(e) { console.error('Review save failed:', e) }
 
-    // 2. Open WhatsApp
     const rStr = Object.entries(ratings).map(([k,v])=>`${k}: ${v}/5`).join(', ')
     const msg = `⭐ *Review from ${name}*\n\nDish: ${dish}\nOverall: ${overall}/5 — ${ratingWords[overall]}\nRatings: ${rStr}\nRecommend: ${recommend?'Yes ✅':'No ❌'}\n\nReview:\n${text}`
     window.open(`https://wa.me/2348094946923?text=${encodeURIComponent(msg)}`,'_blank')
@@ -78,16 +81,21 @@ export default function ReviewSystem() {
 
   const submitCatering = async () => {
     setCBusy(true)
-    // 1. Save to DB
     try {
-      await saveCatering({
-        name: cName, phone: cPhone, event_date: cDate,
-        guests: cGuests, event_type: cEvent || '',
-        notes: cNotes || '', type: 'catering',
+      await fetch('/api/catering', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:       cName,
+          phone:      cPhone,
+          event_date: cDate,
+          guests:     cGuests,
+          event_type: cEvent || '',
+          notes:      cNotes || '',
+        }),
       })
-    } catch(e) { console.error('Catering DB save failed:', e) }
+    } catch(e) { console.error('Catering save failed:', e) }
 
-    // 2. Open WhatsApp
     const msg = `🎉 *Catering Booking Request*\n\n👤 Name: ${cName}\n📞 Phone: ${cPhone}\n📅 Event Date: ${cDate}\n👥 Guests: ${cGuests}\n🎊 Event Type: ${cEvent}\n\n✍️ Notes:\n${cNotes||'None'}`
     window.open(`https://wa.me/2348094946923?text=${encodeURIComponent(msg)}`,'_blank')
     setCDone(true)
@@ -120,7 +128,6 @@ export default function ReviewSystem() {
               <div className="divider" style={{margin:'1rem auto'}}/>
             </div>
 
-            {/* Google review prompt */}
             <div style={{display:'flex',gap:'1rem',alignItems:'center',padding:'1.25rem 1.5rem',borderRadius:'1rem',background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',marginBottom:'2.5rem',flexWrap:'wrap'}}>
               <GoogleIcon small />
               <div style={{flex:1,minWidth:'12rem'}}>
@@ -149,7 +156,6 @@ export default function ReviewSystem() {
               </div>
             ) : (
               <div style={{borderRadius:'1.25rem',border:'1px solid rgba(255,255,255,0.08)',background:'rgba(255,255,255,0.02)',overflow:'hidden'}}>
-                {/* Step tabs */}
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
                   {['Basic Info','Ratings','Your Review'].map((l,i)=>(
                     <div key={l} style={{padding:'1rem',textAlign:'center',fontSize:'0.8125rem',fontWeight:700,
@@ -258,7 +264,6 @@ export default function ReviewSystem() {
               <p style={{color:'rgba(255,255,255,0.45)',fontSize:'0.9375rem',maxWidth:'30rem',margin:'0 auto'}}>From intimate birthday dinners to large corporate events — we handle it all with excellence.</p>
             </div>
 
-            {/* Packages */}
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,220px),1fr))',gap:'1rem',marginBottom:'2.5rem'}}>
               {[
                 {name:'Intimate',guests:'Up to 20',icon:'🕯️',perks:['2 main dishes','1 side dish','Staff service']},
@@ -302,7 +307,7 @@ export default function ReviewSystem() {
                 </div>
                 <p style={{gridColumn:'1/-1',color:'rgba(255,255,255,0.25)',fontSize:'0.75rem',textAlign:'center'}}>Your request is saved securely before opening WhatsApp</p>
                 <div style={{gridColumn:'1/-1',display:'flex',gap:'0.75rem',paddingTop:'0.25rem'}}>
-                  <a href={CATERING_WA} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{flex:1,justifyContent:'center'}}>
+                  <a href={`https://wa.me/2348094946923?text=${encodeURIComponent('Hi Chizzychops & Grillz! I\'d like to enquire about *Event Catering* 🍽️')}`} target="_blank" rel="noopener noreferrer" className="btn-primary" style={{flex:1,justifyContent:'center'}}>
                     <WAIcon /> Quick WhatsApp Enquiry
                   </a>
                   <button className="btn-primary" onClick={submitCatering} disabled={!cName||!cPhone||!cDate||!cGuests||cBusy}

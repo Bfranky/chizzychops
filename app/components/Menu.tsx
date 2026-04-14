@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/app/lib/supabase'
-import type { MenuItem } from '@/app/lib/supabase'
 
 // ── Types ─────────────────────────────────────────────────
 type Item = {
@@ -11,30 +9,13 @@ type Item = {
   badge?: string; badgeColor?: string; note?: string
 }
 
-function toItem(r: MenuItem): Item {
-  return {
-    id:         r.id,
-    name:       r.name,
-    price:      r.price,
-    priceLabel: '₦' + r.price.toLocaleString('en-NG'),
-    cat:        r.category,
-    subcat:     r.subcat ?? undefined,
-    desc:       r.description,
-    img:        r.img_url,
-    img2:       r.img2_url ?? undefined,
-    badge:      r.badge ?? undefined,
-    badgeColor: r.badge_color ?? undefined,
-    note:       r.note ?? undefined,
-  }
-}
-
-const CATS = ['All', 'Soups', 'Stews', 'Rice & Pottage', 'Pasta & Rice', 'Food Boxes']
-
 type CartItem = Item & { qty: number }
 
 function formatPrice(n: number) {
   return '₦' + n.toLocaleString('en-NG')
 }
+
+const CATS = ['All', 'Soups', 'Stews', 'Rice & Pottage', 'Pasta & Rice', 'Food Boxes']
 
 export default function Menu() {
   const [MENU, setMENU]         = useState<Item[]>([])
@@ -45,14 +26,13 @@ export default function Menu() {
   const [showAll, setShowAll]   = useState(false)
 
   useEffect(() => {
-    supabase
-      .from('menu_items')
-      .select('*')
-      .order('sort_order', { ascending: true })
-      .then(({ data, error }) => {
-        if (!error && data) setMENU(data.map(toItem))
+    fetch('/api/menu')
+      .then(res => res.json())
+      .then((data: Item[]) => {
+        setMENU(data)
         setLoading(false)
       })
+      .catch(() => setLoading(false))
   }, [])
 
   const filtered  = cat === 'All' ? MENU : MENU.filter(i => i.cat === cat)
@@ -116,21 +96,11 @@ export default function Menu() {
           </div>
         </div>
 
-        {/* ── Delivery Notice — FULLY MOBILE RESPONSIVE ── */}
-        {/*
-          Mobile  (<600px): icon + text stacked, badges hidden
-          Tablet  (600–900px): icon + text side by side, badges hidden
-          Desktop (>900px): 3-col grid with badges visible
-        */}
+        {/* ── Delivery Notice ── */}
         <div className="delivery-notice" style={{ marginBottom:'2.5rem', borderRadius:'1.25rem', background:'linear-gradient(135deg,rgba(249,115,22,0.08) 0%,rgba(220,38,38,0.04) 100%)', border:'1px solid rgba(249,115,22,0.18)', position:'relative', overflow:'hidden' }}>
-          {/* Left accent bar */}
           <div style={{ position:'absolute', left:0, top:0, bottom:0, width:'3px', background:'linear-gradient(180deg,#F97316,#DC2626)', borderRadius:'3px 0 0 3px' }} />
-
           <div className="delivery-inner">
-            {/* Icon */}
             <div style={{ width:'48px', height:'48px', minWidth:'48px', borderRadius:'0.875rem', background:'rgba(249,115,22,0.12)', border:'1px solid rgba(249,115,22,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.375rem', flexShrink:0 }}>🏡</div>
-
-            {/* Text */}
             <div style={{ flex:1, minWidth:0 }}>
               <p style={{ color:'#fff', fontWeight:800, fontSize:'clamp(0.9375rem,2.5vw,1rem)', marginBottom:'0.375rem', fontFamily:'var(--font-playfair)' }}>
                 Freshly Home-Cooked, Worth Every Minute
@@ -139,14 +109,11 @@ export default function Menu() {
                 Every order cooked from scratch — no shortcuts, no reheated meals.
                 Please allow <strong style={{ color:'#FBBF24', fontWeight:800 }}>up to 6 hours</strong> for delivery.
               </p>
-              {/* Badges — inline on mobile/tablet */}
               <div className="delivery-badges-inline" style={{ display:'flex', gap:'0.5rem', flexWrap:'wrap', marginTop:'0.875rem' }}>
                 <span style={{ display:'inline-flex', alignItems:'center', gap:'0.375rem', padding:'0.375rem 0.75rem', borderRadius:'0.5rem', background:'rgba(251,191,36,0.1)', border:'1px solid rgba(251,191,36,0.2)', color:'#FBBF24', fontWeight:800, fontSize:'0.75rem', whiteSpace:'nowrap' }}>⏱️ Up to 6hrs</span>
                 <span style={{ display:'inline-flex', alignItems:'center', gap:'0.375rem', padding:'0.375rem 0.75rem', borderRadius:'0.5rem', background:'rgba(74,222,128,0.08)', border:'1px solid rgba(74,222,128,0.18)', color:'#4ADE80', fontWeight:800, fontSize:'0.75rem', whiteSpace:'nowrap' }}>✅ Always fresh</span>
               </div>
             </div>
-
-            {/* Badges — sidebar on desktop only */}
             <div className="delivery-badges-side" style={{ display:'flex', flexDirection:'column', gap:'0.5rem', flexShrink:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.5rem 0.875rem', borderRadius:'0.625rem', background:'rgba(251,191,36,0.1)', border:'1px solid rgba(251,191,36,0.2)' }}>
                 <span style={{ fontSize:'0.875rem' }}>⏱️</span>
@@ -218,25 +185,18 @@ export default function Menu() {
       )}
 
       <style>{`
-        /* ── Delivery notice layout ── */
-        .delivery-notice { }
         .delivery-inner {
           display: flex;
           align-items: flex-start;
           gap: 1rem;
           padding: 1.375rem 1.5rem 1.375rem 1.875rem;
         }
-        /* Desktop: show sidebar badges, hide inline badges */
         .delivery-badges-side   { display: flex; }
         .delivery-badges-inline { display: none; }
-
-        /* Tablet & mobile: hide sidebar badges, show inline badges */
         @media (max-width: 860px) {
           .delivery-badges-side   { display: none !important; }
           .delivery-badges-inline { display: flex !important; }
         }
-
-        /* Mobile: tighten padding */
         @media (max-width: 500px) {
           .delivery-inner { padding: 1.125rem 1rem 1.125rem 1.375rem; gap: 0.75rem; }
         }
@@ -276,7 +236,6 @@ function MenuCard({ item, inCart, onAdd }: { item: Item; inCart: number; onAdd: 
       onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)'; if(inCart===0){e.currentTarget.style.boxShadow='0 8px 32px rgba(0,0,0,0.35)'}}}
       onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow=inCart>0?'0 0 0 1px rgba(249,115,22,0.15),0 8px 32px rgba(249,115,22,0.12)':'0 2px 16px rgba(0,0,0,0.25)'}}>
 
-      {/* Image */}
       <div style={{ position:'relative', height:'190px', overflow:'hidden', flexShrink:0, cursor:hasTwo?'pointer':'default' }}
         onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -304,7 +263,6 @@ function MenuCard({ item, inCart, onAdd }: { item: Item; inCart: number; onAdd: 
         </div>
       </div>
 
-      {/* Body */}
       <div style={{ padding:'1.125rem 1.125rem 1rem', display:'flex', flexDirection:'column', gap:'0.375rem', flex:1 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'0.5rem', marginBottom:'0.125rem' }}>
           <span style={{ fontSize:'0.625rem', fontWeight:800, letterSpacing:'0.08em', textTransform:'uppercase', color:'rgba(249,115,22,0.6)' }}>{item.cat}</span>
@@ -341,27 +299,24 @@ function CartDrawer({ cart, total, onClose, onRemove, onQty, onOrder }: {
       <div onClick={onClose} style={{ position:'fixed', inset:0, zIndex:300, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', WebkitBackdropFilter:'blur(6px)' }} />
       <div style={{ position:'fixed', top:0, right:0, bottom:0, width:'min(440px,100vw)', background:'#120800', zIndex:301, display:'flex', flexDirection:'column', boxShadow:'-16px 0 64px rgba(0,0,0,0.7)', animation:'slideInRight 0.32s cubic-bezier(0.22,1,0.36,1)', borderLeft:'1px solid rgba(249,115,22,0.12)' }}>
 
-       {/* Header */}
-<div style={{ padding:'1.25rem', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0, background:'rgba(249,115,22,0.04)' }}>
-  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem' }}>
-    <div>
-      <h3 style={{ color:'#fff', fontFamily:'var(--font-playfair)', fontWeight:700, fontSize:'1.125rem', margin:'0 0 0.125rem' }}>Your Order</h3>
-      <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.8125rem', margin:0 }}>{cart.reduce((s,c)=>s+c.qty,0)} item(s) selected</p>
-    </div>
-    <button onClick={onClose} style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.5rem 0.875rem', borderRadius:'0.5rem', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.55)', cursor:'pointer', fontSize:'0.8125rem', fontWeight:700, transition:'all 0.2s', flexShrink:0 }}
-      onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.12)';e.currentTarget.style.color='#fff'}}
-      onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.55)'}}>
-      ← Back to Menu
-    </button>
-  </div>
-  {/* "Keep adding" nudge */}
-  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.5rem 0.75rem', borderRadius:'0.625rem', background:'rgba(249,115,22,0.08)', border:'1px solid rgba(249,115,22,0.18)' }}>
-    <span style={{ fontSize:'0.875rem' }}>👆</span>
-    <p style={{ color:'rgba(249,115,22,0.85)', fontSize:'0.75rem', fontWeight:700, margin:0 }}>You can still add more items — go back and keep browsing!</p>
-  </div>
-</div>
+        <div style={{ padding:'1.25rem', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0, background:'rgba(249,115,22,0.04)' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'0.75rem' }}>
+            <div>
+              <h3 style={{ color:'#fff', fontFamily:'var(--font-playfair)', fontWeight:700, fontSize:'1.125rem', margin:'0 0 0.125rem' }}>Your Order</h3>
+              <p style={{ color:'rgba(255,255,255,0.35)', fontSize:'0.8125rem', margin:0 }}>{cart.reduce((s,c)=>s+c.qty,0)} item(s) selected</p>
+            </div>
+            <button onClick={onClose} style={{ display:'flex', alignItems:'center', gap:'0.375rem', padding:'0.5rem 0.875rem', borderRadius:'0.5rem', background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.55)', cursor:'pointer', fontSize:'0.8125rem', fontWeight:700, transition:'all 0.2s', flexShrink:0 }}
+              onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.12)';e.currentTarget.style.color='#fff'}}
+              onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.07)';e.currentTarget.style.color='rgba(255,255,255,0.55)'}}>
+              ← Back to Menu
+            </button>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding:'0.5rem 0.75rem', borderRadius:'0.625rem', background:'rgba(249,115,22,0.08)', border:'1px solid rgba(249,115,22,0.18)' }}>
+            <span style={{ fontSize:'0.875rem' }}>👆</span>
+            <p style={{ color:'rgba(249,115,22,0.85)', fontSize:'0.75rem', fontWeight:700, margin:0 }}>You can still add more items — go back and keep browsing!</p>
+          </div>
+        </div>
 
-        {/* Notice */}
         <div style={{ margin:'0.875rem 1.25rem 0', padding:'0.75rem 0.875rem', borderRadius:'0.75rem', background:'rgba(251,191,36,0.07)', border:'1px solid rgba(251,191,36,0.18)', display:'flex', gap:'0.625rem', alignItems:'flex-start' }}>
           <span style={{ fontSize:'0.875rem', flexShrink:0, marginTop:'1px' }}>🏡</span>
           <p style={{ color:'rgba(255,255,255,0.55)', fontSize:'0.75rem', lineHeight:1.7, margin:0 }}>
@@ -370,7 +325,6 @@ function CartDrawer({ cart, total, onClose, onRemove, onQty, onOrder }: {
           </p>
         </div>
 
-        {/* Items */}
         <div style={{ flex:1, overflowY:'auto', padding:'0.875rem 1.25rem', WebkitOverflowScrolling:'touch' }}>
           {cart.map((item, idx) => (
             <div key={item.id} style={{ display:'flex', gap:'0.75rem', padding:'0.875rem 0', borderBottom:idx<cart.length-1?'1px solid rgba(255,255,255,0.05)':'none', alignItems:'center' }}>
@@ -396,7 +350,6 @@ function CartDrawer({ cart, total, onClose, onRemove, onQty, onOrder }: {
           ))}
         </div>
 
-        {/* Footer */}
         <div style={{ padding:'1.125rem 1.25rem', borderTop:'1px solid rgba(255,255,255,0.06)', flexShrink:0, background:'rgba(0,0,0,0.25)' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem', padding:'0.875rem 1rem', borderRadius:'0.875rem', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)' }}>
             <div>
@@ -416,7 +369,6 @@ function CartDrawer({ cart, total, onClose, onRemove, onQty, onOrder }: {
           </p>
         </div>
       </div>
-
       <style>{`@keyframes slideInRight{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}`}</style>
     </>
   )
